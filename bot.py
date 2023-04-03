@@ -170,6 +170,18 @@ class Bot (WebScraping):
     def __unfollow_user__ (self):
         """ Unfollow current user """
         pass
+    
+    def __save_user_history__ (self, user:str, status:str):
+        """ Save new user in history file
+
+        Args:
+            user (str): user link
+            status (str): status of the user
+        """
+        
+        with open (self.history_file, "a", newline='') as file:
+            csv_writer = csv.writer (file)
+            csv_writer.writerow ([user, status])
         
     def __follow_like_users__ (self, max_posts:int=3):
         """ Follow and like posts of users from a profile_links
@@ -208,6 +220,9 @@ class Bot (WebScraping):
                 # Wait after like
                 post_index = posts_elems.index(post) + 1
                 self.__wait__ (f"\tpost liked: {post_index}/{max_posts}")
+            
+            # Save current user in history
+            self.__save_user_history__ (user, "followed_classic")
     
     def follow_classic (self):
         """ Follow users from current followers list of an specific users
