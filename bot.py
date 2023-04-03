@@ -44,9 +44,6 @@ class Bot (WebScraping):
         # Start chrome
         super ().__init__ (headless=self.headless, chrome_folder=self.chrome_folder, start_killing=True)
         
-        # Auto login
-        self.__login__ ()
-        
         # Get history rows
         self.followed_classic, self.followed_advanced, \
         self.unfollowed, self.history = self.__get_history__ ()
@@ -71,28 +68,7 @@ class Bot (WebScraping):
         unfollowed = list(map(lambda row: row[0], filter(lambda row: row[1] == "unfollowed", history)))
         history_rows = list(map(lambda row: row[0], history))
         
-        return followed_classic, followed_advanced, unfollowed, history_rows
-            
-    def __login__ (self):
-        """ Login to twitter with user and password
-        """
-        
-        # Set login page
-        self.set_page ("https://twitter.com/")
-        
-        # # Write user name
-        # self.send_data (self.selectors["user"], self.user)
-        # self.click_js (self.selectors["user_next"])
-        # time.sleep (2)
-        # self.refresh_selenium ()
-        
-        # # Write password
-        # self.send_data (self.selectors["password"], self.password)
-        # time.sleep (1)
-        # self.refresh_selenium ()
-        # self.click_js (self.selectors["login"])
-        
-        input ("Running.\nPress enter to continue...")        
+        return followed_classic, followed_advanced, unfollowed, history_rows      
     
     def __wait__ (self, message:str=""):
         """ Wait time and show message
