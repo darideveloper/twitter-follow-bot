@@ -35,10 +35,11 @@ class Bot (WebScraping):
             "follow": '.css-1dbjc4n.r-6gpygo > [role="button"]',
             "post": '[data-testid="cellInnerDiv"] > .css-1dbjc4n',
             "like": '[role="group"] > div:nth-child(3) > [role="button"]',
-            "post_comment_user": "",
+            "confirm_unfollow": '[data-testid="confirmationSheetConfirm"]',
         }
         self.selectors["post_link"] = f"{self.selectors['post']} .css-1dbjc4n.r-18u37iz.r-1q142lx a"
         self.selectors["post_like_user"] = f"{self.selectors['post']} a"
+        self.selectors["unfollow"] = f"{self.selectors['follow']}"
     
         # Start chrome
         super ().__init__ (headless=self.headless, chrome_folder=self.chrome_folder, start_killing=True)
@@ -170,10 +171,6 @@ class Bot (WebScraping):
                     self.click_js (load_more_selector)
                     time.sleep(3)
     
-    def __unfollow_user__ (self):
-        """ Unfollow current user """
-        pass
-    
     def __save_user_history__ (self, user:str, status:str):
         """ Save new user in history file
 
@@ -196,12 +193,12 @@ class Bot (WebScraping):
         time.sleep (10)
         self.refresh_selenium ()
         
-        
-    def __follow_like_users__ (self, max_posts:int=3):
+    def __follow_like_users__ (self, max_posts:int=3, follow_type:str=""):
         """ Follow and like posts of users from a profile_links
 
         Args:
             max_posts (int, optional): number of post to like. Defaults to 3.
+            follow_type (str, optional): type of follow. Defaults to "".
         """
         
         for user in self.profile_links:
@@ -234,8 +231,38 @@ class Bot (WebScraping):
                 self.__wait__ (f"\tpost liked: {post_index}/{max_posts}")
             
             # Save current user in history
-            self.__save_user_history__ (user, "followed_classic")
-    
+            self.__save_user_history__ (user, follow_type)
+            
+    def __get_unfollow_users__ (self) -> list:
+        """ Request to the user the list of followed users from text files
+
+        Returns:
+            list: list of followed users to unfollow
+        """
+        
+        # Request follow file to user
+        manu_options = ["1", "2"]
+        while True:
+            print ("1. Follow Advanced")
+            print ("2. Follow Classic")
+            option = input ("Select folloed list, for unfollow: ")
+            if option not in manu_options: 
+                print ("\nInvalid option")
+                continue
+            else:
+                break
+        
+        # Select followed list 
+        if option == "1": 
+            followed = self.followed_advanced
+        elif option == "2":
+            followed = self.followed_classic
+            
+        # Remove users already unfollowed
+        followed = list(filter(lambda user: user not in self.unfollowed, followed))
+        
+        return followed
+
     def follow_classic (self):
         """ Follow users from current followers list of an specific users
         """
@@ -260,7 +287,7 @@ class Bot (WebScraping):
             print (f"{len(self.profile_links)} users found")
         
         # Follow users
-        self.__follow_like_users__ ()
+        self.__follow_like_users__ (follow_type="followed_classic")
     
     def follow_advanced (self):
         """ Follow users from linkes of last posts from specific users
@@ -307,9 +334,34 @@ class Bot (WebScraping):
                     break
                 
         # Follow users
-        self.__follow_like_users__ ()
+        self.__follow_like_users__ (follow_type="followed_advanced")
     
     def unfollow (self):
-        pass
-    
+        """ Unfollow users """
+        
+        # Select users to unfollow
+        unfollow_users = self.__get_unfollow_users__ () 
+        
+        # Unfollow each user
+        for user in unfollow_users:
+            
+            # Load user page
+            self.__set_page_wait__ (user)
+            
+            # Unfollow user
+            unfollow_text = self.get_text (self.selectors["unfollow"])
+            if unfollow_text.lower().strip() == "following":
+                self.click_js (self.selectors["unfollow"])
+                self.refresh_selenium ()
+                
+                # Confirm unfollow
+                self.click_js (self.selectors["unfollow_confirm"])
+                
+                # Save user in history
+                self.__save_user_history__ (user, "unfollowed")
+                
+                # Wait after unfollow
+                self.__wait__ (f"user unfollowed: {user}")
+            
+            
     
