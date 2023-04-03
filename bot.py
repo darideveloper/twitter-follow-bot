@@ -1,4 +1,5 @@
 import os
+import csv
 import time
 import random
 import config
@@ -34,6 +35,33 @@ class Bot (WebScraping):
         # Auto login
         self.__login__ ()
         
+        # Get history rows
+        self.followed_classic, self.followed_advanced, \
+        self.unfollowed, self.history = self.__get_history__ ()
+        
+    def __get_history__ (self) -> tuple:
+        """ Read rows from history file
+
+        Returns:
+            tuple: lists of followed and unfollowed users
+                list: followed_classic
+                list: followed_advanced
+                list: unfollowed
+                list: history_rows
+        """
+        
+        history_file = os.path.join (os.path.dirname (__file__), "history.csv")
+        with open (history_file, "r") as file:
+            csv_reader = csv.reader (file)
+            history = list (csv_reader)
+            
+        followed_classic = list(map(lambda row: row[0], filter(lambda row: row[1] == "followed_classic", history)))
+        followed_advanced = list(map(lambda row: row[0], filter(lambda row: row[1] == "followed_advanced", history)))
+        unfollowed = list(map(lambda row: row[0], filter(lambda row: row[1] == "unfollowed", history)))
+        history_rows = list(map(lambda row: row[0], history))
+        
+        return followed_classic, followed_advanced, unfollowed, history_rows
+            
     def __login__ (self):
         """ Login to twitter with user and password
         """
@@ -54,29 +82,42 @@ class Bot (WebScraping):
         # self.click_js (self.selectors["login"])
         
         input ("Running.\nPress enter to continue...")        
-        
-    def __set_user__ (self, user:str):
-        """ Load user proffile page 
-
-        Args:
-            user (str): user name
-        """
-        
-        url = f"https://twitter.com/{user}"
-        self.set_page (url)
     
     def __wait__ (self, message:str=""):
+        """ Wait time and show message
+
+        Args:
+            message (str, optional): message to show after wait time. Defaults to "".
+        """
+        
         time.sleep (random.randint(30, 180))
         if message:
             print (message)
     
-    def __get_links__ (self, selector_link, load_more_selector="", scroll_by=0): 
+    def __load_links__ (self, selector_link:str, load_more_selector:str="", filter_advanced:bool=False, 
+                       filter_classic:bool=False, filter_unfollowed:bool=False): 
+        """ Extract links from specific selects, and go down in the page for load the next links
+        Save links in "profile_links" attribute
+
+        Args:
+            selector_link (str): css selector for profile links
+            load_more_selector (str, optional): element to click for load more results. Defaults to "".
+            filter_advanced (bool, optional): skip users already followed with the advanced bot. Defaults to False.
+            filter_classic (bool, optional): skip users already followed with the classic bot. Defaults to False.
+            filter_unfollowed (bool, optional): skip users already unfollowed. Defaults to False.
         """
-        Extract links from specific selects, and go down in the page for load the next links
-        Save links in class variable "profile_links"
-        """
+        
                 
-        print ("\tGetting links...")
+        print ("\tGetting user profiles...")
+        
+        # Gennerate list of users to skip
+        skip_users = []
+        if filter_advanced:
+            skip_users += self.followed_advanced
+        if filter_classic:
+            skip_users += self.followed_classic
+        if filter_unfollowed:
+            skip_users += self.unfollowed
         
         more_links = True
         last_links = []
@@ -100,7 +141,7 @@ class Bot (WebScraping):
                 # if "explore/tags" in link: 
                 #     continue
                 
-                if link not in self.followed_list and link not in self.profile_links: 
+                if link not in skip_users: 
                     self.profile_links.append(link)
                     
                 # Count number of links
@@ -122,6 +163,29 @@ class Bot (WebScraping):
                     self.click_js (load_more_selector)
                     time.sleep(3)
     
+    def __set_user__ (self, profile_link:str):
+        """ Open profile page of specific user """
+        
+        self.set_page (profile_link)
+    
+    def __follow_user__ (self):
+        """ Follow current user """
+        pass
+    
+    def __like_posts__ (self, post_num:int=3):
+        """ Like specific number of posts of the current user
+
+        Args:
+            post_num (int, optional): Post to like. Defaults to 3.
+        """
+        pass
+    
+    def __unfollow_user__ (self):
+        """ Unfollow current user """
+        
+    def __follow_like_users__ (self):
+        """ Follow and like posts of users from a profile_links """
+    
     def follow_classic (self):
         """ Follow users from current followers list of an specific users
         """
@@ -136,10 +200,15 @@ class Bot (WebScraping):
             self.set_page (url)
                     
             # Go down and get links
-            self.__get_links__ (
+            self.__load_links__ (
                 self.selectors["followers_links"], 
-                scroll_by=5000
+                filter_classic=True,
+                filter_unfollowed=True,
             )
+            
+            print (f"{len(self.profile_links)} users found")
+        
+        # Follow users
     
     def follow_advanced (self):
         pass
