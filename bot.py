@@ -3,6 +3,7 @@ import csv
 import time
 import random
 import config
+from selenium.webdriver.common.by import By
 from scraping_manager.automate import WebScraping
 
 class Bot (WebScraping):
@@ -27,6 +28,9 @@ class Bot (WebScraping):
             "login": '.css-1dbjc4n.r-pw2am6 > [role="button"]',
             "followers_down": 'main',
             "followers_links": '[aria-label="Timeline: Followers"] [data-testid="cellInnerDiv"] a[role="link"]', 
+            "follow": '.css-1dbjc4n.r-6gpygo > [role="button"]',
+            "post": '[data-testid="cellInnerDiv"] > .css-1dbjc4n',
+            "like": '[role="group"] > div:nth-child(3) > [role="button"]'
         }
     
         # Start chrome
@@ -163,28 +167,47 @@ class Bot (WebScraping):
                     self.click_js (load_more_selector)
                     time.sleep(3)
     
-    def __set_user__ (self, profile_link:str):
-        """ Open profile page of specific user """
-        
-        self.set_page (profile_link)
-    
-    def __follow_user__ (self):
-        """ Follow current user """
-        pass
-    
-    def __like_posts__ (self, post_num:int=3):
-        """ Like specific number of posts of the current user
-
-        Args:
-            post_num (int, optional): Post to like. Defaults to 3.
-        """
-        pass
-    
     def __unfollow_user__ (self):
         """ Unfollow current user """
+        pass
         
-    def __follow_like_users__ (self):
-        """ Follow and like posts of users from a profile_links """
+    def __follow_like_users__ (self, max_posts:int=3):
+        """ Follow and like posts of users from a profile_links
+
+        Args:
+            max_posts (int, optional): number of post to like. Defaults to 3.
+        """
+        
+        for user in self.profile_links:
+            
+            # Set user page
+            self.set_page (user)
+            time.sleep (3)
+            self.refresh_selenium ()
+            
+            # Follow user
+            follow_text = self.get_text (self.selectors["follow"])
+            if follow_text.lower().strip() == "follow":
+                self.click_js (self.selectors["follow"])
+                self.__wait__ (f"user followed: {user}")
+            else:
+                self.__wait__ (f"user already followed: {user}")
+            
+            # Get posts of user
+            posts_elems = self.get_elems (self.selectors["post"])
+            if len(posts_elems) > max_posts:
+                posts_elems = posts_elems[:max_posts]
+            
+            # loop posts to like
+            for post in posts_elems:
+                
+                # Like post
+                like_button = post.find_element(By.CSS_SELECTOR, self.selectors["like"])
+                like_button.click ()
+                        
+                # Wait after like
+                post_index = posts_elems.index(post) + 1
+                self.__wait__ (f"\tpost liked: {post_index}/{max_posts}")
     
     def follow_classic (self):
         """ Follow users from current followers list of an specific users
@@ -209,6 +232,7 @@ class Bot (WebScraping):
             print (f"{len(self.profile_links)} users found")
         
         # Follow users
+        self.__follow_like_users__ ()
     
     def follow_advanced (self):
         pass
