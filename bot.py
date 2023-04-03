@@ -199,12 +199,12 @@ class Bot (WebScraping):
             for post in posts_elems:
                 
                 # Like post
-                like_button = post.find_element(By.CSS_SELECTOR, self.selectors["like"])
                 try:
-                    like_button.click ()
+                    like_button = post.find_element(By.CSS_SELECTOR, self.selectors["like"])
                 except:
                     continue
                 else:
+                    like_button.click ()
                         
                     # Wait after like
                     post_index = posts_elems.index(post) + 1
