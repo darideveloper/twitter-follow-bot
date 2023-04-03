@@ -1,0 +1,7 @@
+{
+    "debug": true,
+    "headless": false,
+    "list_follow": ["elonmusk"],
+    "max_follow": 1000,
+    "chrome_folder": "C:\\Users\\daria\\AppData\\Local\\Google\\Chrome\\User Data"
+}
