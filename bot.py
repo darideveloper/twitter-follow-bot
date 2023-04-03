@@ -200,11 +200,15 @@ class Bot (WebScraping):
                 
                 # Like post
                 like_button = post.find_element(By.CSS_SELECTOR, self.selectors["like"])
-                like_button.click ()
+                try:
+                    like_button.click ()
+                except:
+                    continue
+                else:
                         
-                # Wait after like
-                post_index = posts_elems.index(post) + 1
-                self.__wait__ (f"\tpost liked: {post_index}/{max_posts}")
+                    # Wait after like
+                    post_index = posts_elems.index(post) + 1
+                    self.__wait__ (f"\tpost liked: {post_index}/{max_posts}")
             
             # Save current user in history
             self.__save_user_history__ (user, follow_type)
