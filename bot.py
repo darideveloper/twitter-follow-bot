@@ -147,11 +147,8 @@ class Bot (WebScraping):
             # Validate each link
             for link in links: 
                 
-                # # Skip tag links
-                # if "explore/tags" in link: 
-                #     continue
-                
-                if link not in skip_users: 
+                # Save current linl
+                if link not in skip_users and link not in self.profile_links: 
                     self.profile_links.append(link)
                     
                 # Count number of links
@@ -308,6 +305,9 @@ class Bot (WebScraping):
                 # End loop if max users reached
                 if len(self.profile_links) >= self.max_follow:
                     break
+                
+        # Follow users
+        self.__follow_like_users__ ()
     
     def unfollow (self):
         pass
