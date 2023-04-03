@@ -18,7 +18,12 @@ class Bot (WebScraping):
         self.list_follow = config.get_credential ("list_follow")
         self.max_follow = config.get_credential ("max_follow")
         self.chrome_folder = config.get_credential ("chrome_folder")
+        
+        # User to follow or unfollow
         self.profile_links = []
+        
+        # History file
+        self.history_file = os.path.join (os.path.dirname (__file__), "history.csv")
         
         # Css selectors
         self.selectors = {
@@ -26,12 +31,14 @@ class Bot (WebScraping):
             "user_next": '.css-1dbjc4n.r-mk0yit + div[role="button"][tabindex="0"]',
             "password": 'input[autocomplete="current-password"]',
             "login": '.css-1dbjc4n.r-pw2am6 > [role="button"]',
-            "followers_down": 'main',
             "followers_links": '[aria-label="Timeline: Followers"] [data-testid="cellInnerDiv"] a[role="link"]', 
             "follow": '.css-1dbjc4n.r-6gpygo > [role="button"]',
             "post": '[data-testid="cellInnerDiv"] > .css-1dbjc4n',
-            "like": '[role="group"] > div:nth-child(3) > [role="button"]'
+            "like": '[role="group"] > div:nth-child(3) > [role="button"]',
+            "post_comment_user": "",
         }
+        self.selectors["post_link"] = f"{self.selectors['post']} .css-1dbjc4n.r-18u37iz.r-1q142lx a"
+        self.selectors["post_like_user"] = f"{self.selectors['post']} a"
     
         # Start chrome
         super ().__init__ (headless=self.headless, chrome_folder=self.chrome_folder, start_killing=True)
@@ -54,8 +61,7 @@ class Bot (WebScraping):
                 list: history_rows
         """
         
-        history_file = os.path.join (os.path.dirname (__file__), "history.csv")
-        with open (history_file, "r") as file:
+        with open (self.history_file, "r") as file:
             csv_reader = csv.reader (file)
             history = list (csv_reader)
             
@@ -99,7 +105,7 @@ class Bot (WebScraping):
             print (message)
     
     def __load_links__ (self, selector_link:str, load_more_selector:str="", filter_advanced:bool=False, 
-                       filter_classic:bool=False, filter_unfollowed:bool=False): 
+                       filter_classic:bool=False, filter_unfollowed:bool=False, load_from:str=False): 
         """ Extract links from specific selects, and go down in the page for load the next links
         Save links in "profile_links" attribute
 
@@ -112,7 +118,7 @@ class Bot (WebScraping):
         """
         
                 
-        print ("\tGetting user profiles...")
+        print (f"\tGetting user profiles from {load_from}...")
         
         # Gennerate list of users to skip
         skip_users = []
@@ -128,8 +134,8 @@ class Bot (WebScraping):
         while more_links: 
             
             # Get all profile links
+            time.sleep(6)
             self.refresh_selenium()
-            time.sleep(3)
             links = self.get_attribs(selector_link, "href", allow_duplicates=False, allow_empty=False)
             
             # Break where no new links
@@ -182,6 +188,17 @@ class Bot (WebScraping):
         with open (self.history_file, "a", newline='') as file:
             csv_writer = csv.writer (file)
             csv_writer.writerow ([user, status])
+            
+    def __set_page_wait__ (self, user:str):
+        """ Open user profile and wait for load
+
+        Args:
+            user (str): user link
+        """
+        self.set_page (user)
+        time.sleep (10)
+        self.refresh_selenium ()
+        
         
     def __follow_like_users__ (self, max_posts:int=3):
         """ Follow and like posts of users from a profile_links
@@ -193,9 +210,7 @@ class Bot (WebScraping):
         for user in self.profile_links:
             
             # Set user page
-            self.set_page (user)
-            time.sleep (3)
-            self.refresh_selenium ()
+            self.__set_page_wait__ (user)
             
             # Follow user
             follow_text = self.get_text (self.selectors["follow"])
@@ -237,11 +252,12 @@ class Bot (WebScraping):
             url = f"https://twitter.com/{user}/followers"
             self.set_page (url)
                     
-            # Go down and get links
+            # Go down and get profiles links
             self.__load_links__ (
                 self.selectors["followers_links"], 
                 filter_classic=True,
                 filter_unfollowed=True,
+                load_from="followers"
             )
             
             print (f"{len(self.profile_links)} users found")
@@ -250,7 +266,48 @@ class Bot (WebScraping):
         self.__follow_like_users__ ()
     
     def follow_advanced (self):
-        pass
+        """ Follow users from linkes of last posts from specific users
+        """
+        
+        # Loop each user
+        for user in self.list_follow:
+            
+            # Show followers page 
+            url = f"https://twitter.com/{user}"
+            self.__set_page_wait__ (url)
+            
+            # Get posts links
+            posts_links = self.get_attribs (self.selectors["post_link"], "href")
+            
+            # Open each post details
+            for post_link in posts_links:
+                
+                # Open post likes
+                post_link_likes = post_link + "/likes"
+                self.__set_page_wait__ (post_link_likes)
+                
+                # Go down and get profiles links from likes
+                self.__load_links__ (
+                    self.selectors["post_like_user"], 
+                    filter_advanced=True,
+                    filter_unfollowed=True,
+                    load_from="likes"
+                )
+                
+                # Open post comments
+                self.__set_page_wait__ (post_link)
+                
+                # Go down and get profiles links from comments
+                self.__load_links__ (
+                    self.selectors["post_like_user"], 
+                    filter_advanced=True,
+                    filter_unfollowed=True,
+                    load_from="comments"
+                )
+                
+                # End loop if max users reached
+                if len(self.profile_links) >= self.max_follow:
+                    break
     
     def unfollow (self):
         pass
