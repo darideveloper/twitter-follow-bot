@@ -337,7 +337,7 @@ class Bot (WebScraping):
                 self.refresh_selenium ()
                 
                 # Confirm unfollow
-                self.click_js (self.selectors["unfollow_confirm"])
+                self.click_js (self.selectors["confirm_unfollow"])
                 
                 # Save user in history
                 self.__save_user_history__ (user, "unfollowed")
