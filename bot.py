@@ -264,7 +264,7 @@ class Bot (WebScraping):
                 load_from="followers"
             )
             
-            print (f"{len(self.profile_links)} users found")
+        print (f"{len(self.profile_links)} users found")
         
         # Follow users
         self.__follow_like_users__ (follow_type="followed_classic")
@@ -312,6 +312,8 @@ class Bot (WebScraping):
                 # End loop if max users reached
                 if len(self.profile_links) >= self.max_follow:
                     break
+                
+        print (f"{len(self.profile_links)} users found")
                 
         # Follow users
         self.__follow_like_users__ (follow_type="followed_advanced")
